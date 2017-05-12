@@ -2,8 +2,36 @@
 #
 # tournament.py -- implementation of a Swiss-system tournament
 #
-
+from functools import wraps
 import psycopg2
+
+
+def db_wrap(func):
+    '''Wrap function in PostgreSQL transaction.
+
+    Connects to database, creates a cursor, begins transaction, executes
+    function then closes connection.
+    Wrapped function needs cursor as first arg - other are preserved.
+
+    Args:
+        func: function to wrap with first argument as cursor
+    '''
+    @wraps(func)
+    def connected_func(*args, **kwargs):
+        conn = connect()
+        c = conn.cursor()
+        try:
+            c.execute("BEGIN")
+            transaction = func(c, *args, **kwargs)  # Pass cursor to func
+            conn.commit()
+        except:
+            conn.rollback()  # Prevent any incorrect transactions on any error
+            raise
+        finally:
+            c.close()
+            conn.close()
+        return transaction
+    return connected_func
 
 
 def connect():
@@ -11,38 +39,28 @@ def connect():
     return psycopg2.connect(dbname="tournament")
 
 
-def deleteMatches():
+@db_wrap
+def deleteMatches(cursor):
     """Remove all the match records from the database."""
-    conn = connect()
-    c = conn.cursor()
-    c.execute("DELETE FROM matches;")
-    conn.commit()
-    c.close()
-    conn.close()
+    cursor.execute("DELETE FROM matches;")
 
 
-def deletePlayers():
+@db_wrap
+def deletePlayers(cursor):
     """Remove all the player records from the database."""
-    conn = connect()
-    c = conn.cursor()
-    c.execute("DELETE FROM players;")
-    conn.commit()
-    c.close()
-    conn.close()
+    cursor.execute("DELETE FROM players;")
 
 
-def countPlayers():
+@db_wrap
+def countPlayers(cursor):
     """Returns the number of players currently registered."""
-    conn = connect()
-    c = conn.cursor()
-    c.execute("select count(*) from players;")
-    count = c.fetchall()
-    c.close()
-    conn.close()
+    cursor.execute("select count(*) from players;")
+    count = cursor.fetchall()
     return count[0][0]  # first column, first row of result table
 
 
-def registerPlayer(name):
+@db_wrap
+def registerPlayer(cursor, name):
     """Adds a player to the tournament database.
 
     The database assigns a unique serial id number for the player.  (This
@@ -51,15 +69,11 @@ def registerPlayer(name):
     Args:
       name: the player's full name (need not be unique).
     """
-    conn = connect()
-    c = conn.cursor()
-    c.execute("INSERT INTO players VALUES (%s);", (name,))
-    conn.commit()
-    c.close()
-    conn.close()
+    cursor.execute("INSERT INTO players VALUES (%s);", (name,))
 
 
-def playerStandings():
+@db_wrap
+def playerStandings(cursor):
     """Returns a list of the players and their win records, sorted by wins.
 
     The first entry in the list should be the player in first place, or a player
@@ -72,31 +86,24 @@ def playerStandings():
         wins: the number of matches the player has won
         matches: the number of matches the player has played
     """
-    conn = connect()
-    c = conn.cursor()
-    c.execute("SELECT * FROM standings;")
-    standings = c.fetchall()
-    c.close()
-    conn.close()
+    cursor.execute("SELECT * FROM standings;")
+    standings = cursor.fetchall()
     return standings
 
 
-def reportMatch(winner, loser):
+@db_wrap
+def reportMatch(cursor, winner, loser):
     """Records the outcome of a single match between two players.
 
     Args:
       winner:  the id number of the player who won
       loser:  the id number of the player who lost
     """
-    conn = connect()
-    c = conn.cursor()
-    c.execute("INSERT INTO matches values (%s, %s);", (winner, loser,))
-    conn.commit()
-    c.close()
-    conn.close()
+    cursor.execute("INSERT INTO matches values (%s, %s);", (winner, loser,))
 
 
-def swissPairings():
+@db_wrap
+def swissPairings(cursor):
     """Returns a list of pairs of players for the next round of a match.
 
     Assuming that there are an even number of players registered, each player
@@ -111,10 +118,8 @@ def swissPairings():
         id2: the second player's unique id
         name2: the second player's name
     """
-    conn = connect()
-    c = conn.cursor()
-    c.execute("SELECT id, name FROM groups;")
-    pair_order = c.fetchall()  # list of tuples [(id,name),(id,name)...]
+    cursor.execute("SELECT id, name FROM groups;")
+    pair_order = cursor.fetchall()  # list of tuples [(id,name),(id,name)...]
     pairs_list = []
     # zip lists created from alternate list item slices
     for p1, p2 in zip(pair_order[0::2], pair_order[1::2]):  # [start_pos::step]
@@ -122,4 +127,4 @@ def swissPairings():
         # p2 = (id2,name2)
         # takes each item from p1, p2 tuples into new tuple
         pairs_list.append((p1[0], p1[1], p2[0], p2[1]))
-    return pair_order
+    return pairs_list
