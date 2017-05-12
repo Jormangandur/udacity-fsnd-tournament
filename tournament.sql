@@ -40,5 +40,7 @@ CREATE VIEW ranks AS
 
 CREATE VIEW groups AS
                    SELECT *,
-                   (position+1)/2 as group -- integer division -> (2+1)/2 = 1
+                   -- integer division -> (1+1)/2 = 1 (2+1)/2 = 1 (3+1)/2 = 2
+                   -- gives same group number for position 1,2 then 3,4 etc
+                   (position+1)/2 as group
                    FROM ranks;

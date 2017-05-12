@@ -39,7 +39,7 @@ def countPlayers():
     count = c.fetchall()
     c.close()
     conn.close()
-    return count[0][0]
+    return count[0][0]  # first column, first row of result table
 
 
 def registerPlayer(name):
@@ -114,8 +114,12 @@ def swissPairings():
     conn = connect()
     c = conn.cursor()
     c.execute("SELECT id, name FROM groups;")
-    pair_order = c.fetchall()
+    pair_order = c.fetchall()  # list of tuples [(id,name),(id,name)...]
     pairs_list = []
-    for p1, p2 in zip(pair_order[0::2], pair_order[1::2]):
+    # zip lists created from alternate list item slices
+    for p1, p2 in zip(pair_order[0::2], pair_order[1::2]):  # [start_pos::step]
+        # p1 = (id1,name1)
+        # p2 = (id2,name2)
+        # takes each item from p1, p2 tuples into new tuple
         pairs_list.append((p1[0], p1[1], p2[0], p2[1]))
-    return pairs_list
+    return pair_order
