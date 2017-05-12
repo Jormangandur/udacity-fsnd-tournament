@@ -1,5 +1,5 @@
 # Tournament Results
-Udacity FSND Project - Build a Portfolio Site
+Udacity FSND Project
 ---------------------
 Python module using PostgreSQL database to keep track of players and matches in a game tournament.
 
