@@ -1,4 +1,4 @@
-# Tournament Results
+# Swiss Tournament Results
 ![Part of the Udacity Full-Stack Web Development Nanodegree](https://img.shields.io/badge/Udacity-Full--Stack%20Web%20Developer%20Nanodegree-02b3e4.svg)
 ---------------------
 Python module using PostgreSQL database to keep track of players and matches in a game tournament.
